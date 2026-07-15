@@ -1,0 +1,14 @@
+appId: com.muticode.app
+productName: muticode
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+asarUnpack:
+  - "**/node_modules/node-pty/**"
+mac:
+  target:
+    - dmg
+  category: public.app-category.developer-tools
