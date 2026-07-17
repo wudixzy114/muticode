@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, dialog, shell } from 'electron'
 import { join } from 'path'
 import { registerIpc } from './ipc'
 import { PtyManager } from './pty-manager'
@@ -18,9 +18,9 @@ const manager = new PtyManager(() => {
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1400,
+    width: 1600,
     height: 900,
-    minWidth: 640,
+    minWidth: 480,
     minHeight: 400,
     show: false,
     title: 'muticode',
@@ -38,6 +38,22 @@ function createWindow(): void {
     mainWindow?.show()
     // Restore persisted agents once the renderer can receive their output.
     for (const agent of store.getAgents()) manager.restore(agent)
+  })
+
+  mainWindow.on('close', (e) => {
+    // Guard the important, possibly long-running agent sessions against an
+    // accidental close (red button, Cmd+W, Cmd+Q). Sync dialog lets us decide
+    // preventDefault inline with no async race. No agents → nothing to lose.
+    if (store.getAgents().length === 0) return
+    const choice = dialog.showMessageBoxSync(mainWindow!, {
+      type: 'warning',
+      buttons: ['取消', '退出'],
+      defaultId: 0,
+      cancelId: 0,
+      message: '确定要退出 muticode 吗?',
+      detail: '所有终端会话及其中运行的任务都会被终止。'
+    })
+    if (choice === 0) e.preventDefault()
   })
 
   mainWindow.on('closed', () => {
@@ -66,11 +82,19 @@ app.whenReady().then(() => {
   })
 })
 
+// PTYs are disposed here — after windows have actually closed (i.e. the close
+// confirmation passed). NOT in before-quit: on Cmd+Q that fires before the
+// window close event, so disposing there would kill sessions the user may
+// still cancel back into.
 app.on('window-all-closed', () => {
   manager.disposeAll()
   if (process.platform !== 'darwin') app.quit()
 })
 
-app.on('before-quit', () => {
+// On Cmd+Q / app.quit(), Electron closes windows then emits will-quit (not
+// window-all-closed), and only if no close handler called preventDefault — so
+// this runs exactly when the user has confirmed the quit. disposeAll is
+// idempotent, so overlapping with window-all-closed is harmless.
+app.on('will-quit', () => {
   manager.disposeAll()
 })

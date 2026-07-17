@@ -1,8 +1,8 @@
-import type { AgentStatus } from '../shared/types'
+import type { AgentKind, AgentStatus } from '../shared/types'
 
 /**
  * Heuristics for classifying an agent's status from its terminal output.
- * Kept in one object so they can be tuned per `claude` version (or any command)
+ * Kept in one object so they can be tuned per agent kind (`claude`, `codex`)
  * without touching the detection loop.
  */
 export interface StatusPatterns {
@@ -16,26 +16,55 @@ export interface StatusPatterns {
   working: RegExp[]
 }
 
-export const DEFAULT_PATTERNS: StatusPatterns = {
+/** Working markers common to Claude Code, Codex, and most modern TUIs. */
+const COMMON_WORKING: RegExp[] = [
+  // Braille spinner glyphs used by many TUIs.
+  /[⠀-⣿]/,
+  /esc to interrupt/i,
+  /thinking/i,
+  /\btokens\b/i,
+  /\(\d+s\b/,
+  /working|running|building|compiling/i
+]
+
+/** Confirm/approval prompts common across agents. */
+const COMMON_WAITING: RegExp[] = [
+  /do you want to proceed/i,
+  /\ballow\b.*\?/i,
+  /\(y\/n\)/i,
+  /press\s+enter\s+to/i,
+  /❯\s*1\./,
+  /\b1\.\s*yes\b/i
+]
+
+export const CLAUDE_PATTERNS: StatusPatterns = {
+  busyWindowMs: 800,
+  idleAfterMs: 1500,
+  waiting: COMMON_WAITING,
+  working: COMMON_WORKING
+}
+
+/**
+ * Codex prints approval prompts for shell commands and patch application
+ * ("Allow command?", "Approve this edit?", "Apply changes?"). It also drives a
+ * spinner + "Esc to interrupt" hint while a turn runs, covered by COMMON_WORKING.
+ */
+export const CODEX_PATTERNS: StatusPatterns = {
   busyWindowMs: 800,
   idleAfterMs: 1500,
   waiting: [
-    /do you want to proceed/i,
-    /\ballow\b.*\?/i,
-    /\(y\/n\)/i,
-    /press\s+enter\s+to/i,
-    /❯\s*1\./,
-    /\b1\.\s*yes\b/i
+    ...COMMON_WAITING,
+    /allow (this )?command/i,
+    /\bapprove\b/i,
+    /apply (this )?(patch|change|edit)/i,
+    /run (this )?command\?/i,
+    /\by\/n\b/i
   ],
-  working: [
-    // Braille spinner glyphs used by many TUIs.
-    /[⠀-⣿]/,
-    /esc to interrupt/i,
-    /thinking/i,
-    /\btokens\b/i,
-    /\(\d+s\b/,
-    /working|running|building|compiling/i
-  ]
+  working: COMMON_WORKING
+}
+
+export function patternsForKind(kind: AgentKind): StatusPatterns {
+  return kind === 'codex' ? CODEX_PATTERNS : CLAUDE_PATTERNS
 }
 
 // Strip ANSI escape sequences (CSI + OSC + other) so regexes match plain text.
@@ -61,7 +90,7 @@ export class StatusTracker {
 
   constructor(
     private now: () => number,
-    private patterns: StatusPatterns = DEFAULT_PATTERNS
+    private patterns: StatusPatterns = CLAUDE_PATTERNS
   ) {}
 
   push(chunk: string): AgentStatus {

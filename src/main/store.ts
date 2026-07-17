@@ -13,8 +13,10 @@ export class Store {
     try {
       const raw = readFileSync(this.file, 'utf8')
       const parsed = JSON.parse(raw) as Partial<PersistedState>
+      const agents = Array.isArray(parsed.agents) ? parsed.agents : []
       this.state = {
-        agents: Array.isArray(parsed.agents) ? parsed.agents : [],
+        // Agents persisted before `kind` existed default to Claude Code.
+        agents: agents.map((a) => ({ ...a, kind: a.kind === 'codex' ? 'codex' : 'claude' })),
         columnLayout:
           parsed.columnLayout && typeof parsed.columnLayout === 'object'
             ? parsed.columnLayout

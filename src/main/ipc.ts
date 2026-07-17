@@ -30,6 +30,8 @@ export function registerIpc(store: Store, manager: PtyManager): void {
     manager.resize(id, cols, rows)
   })
 
+  ipcMain.handle(IPC.getBacklog, (_e, id: string) => manager.getBacklog(id))
+
   ipcMain.handle(IPC.pickDirectory, async () => {
     const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
     const result = await dialog.showOpenDialog(win, {

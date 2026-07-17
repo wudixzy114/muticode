@@ -1,15 +1,24 @@
 import { useEffect, useState } from 'react'
-import type { CreateAgentInput } from '../../../shared/types'
+import type { AgentKind, CreateAgentInput } from '../../../shared/types'
+import { DEFAULT_COMMAND } from '../../../shared/types'
 
 interface Props {
   onSubmit: (input: CreateAgentInput) => void
   onCancel: () => void
 }
 
+const KINDS: { value: AgentKind; label: string }[] = [
+  { value: 'claude', label: 'Claude Code' },
+  { value: 'codex', label: 'Codex' }
+]
+
 export function AddAgentDialog({ onSubmit, onCancel }: Props): React.JSX.Element {
   const [name, setName] = useState('')
   const [cwd, setCwd] = useState('')
-  const [command, setCommand] = useState('claude')
+  const [kind, setKind] = useState<AgentKind>('claude')
+  const [command, setCommand] = useState(DEFAULT_COMMAND.claude)
+  // Once the user edits the command, stop overwriting it when the kind changes.
+  const [commandTouched, setCommandTouched] = useState(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -18,6 +27,11 @@ export function AddAgentDialog({ onSubmit, onCancel }: Props): React.JSX.Element
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onCancel])
+
+  const pickKind = (next: AgentKind): void => {
+    setKind(next)
+    if (!commandTouched) setCommand(DEFAULT_COMMAND[next])
+  }
 
   const pickDir = async (): Promise<void> => {
     const dir = await window.muti.pickDirectory()
@@ -37,7 +51,8 @@ export function AddAgentDialog({ onSubmit, onCancel }: Props): React.JSX.Element
     onSubmit({
       name: name.trim() || (cwd.split('/').filter(Boolean).pop() ?? 'agent'),
       cwd: cwd.trim(),
-      command: command.trim() || 'claude'
+      kind,
+      command: command.trim() || DEFAULT_COMMAND[kind]
     })
   }
 
@@ -45,6 +60,22 @@ export function AddAgentDialog({ onSubmit, onCancel }: Props): React.JSX.Element
     <div className="dialog-backdrop" onMouseDown={onCancel}>
       <div className="dialog" onMouseDown={(e) => e.stopPropagation()}>
         <h2>Add agent</h2>
+
+        <label className="field">
+          <span>Type</span>
+          <div className="segmented">
+            {KINDS.map((k) => (
+              <button
+                key={k.value}
+                type="button"
+                className={kind === k.value ? 'segmented-btn active' : 'segmented-btn'}
+                onClick={() => pickKind(k.value)}
+              >
+                {k.label}
+              </button>
+            ))}
+          </div>
+        </label>
 
         <label className="field">
           <span>Working directory</span>
@@ -76,8 +107,11 @@ export function AddAgentDialog({ onSubmit, onCancel }: Props): React.JSX.Element
           <input
             type="text"
             value={command}
-            placeholder="claude"
-            onChange={(e) => setCommand(e.target.value)}
+            placeholder={DEFAULT_COMMAND[kind]}
+            onChange={(e) => {
+              setCommand(e.target.value)
+              setCommandTouched(true)
+            }}
           />
           <small className="field-hint">
             Runs in a login shell, so aliases and PATH resolve as in your terminal.

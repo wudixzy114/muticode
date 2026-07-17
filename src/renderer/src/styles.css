@@ -83,13 +83,25 @@ body {
 }
 
 /* ---- Panels / columns ---- */
-.panel-group {
+.grid-wrap {
   flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.panel-group {
+  height: 100%;
+  min-height: 0;
+}
+
+.column-stack {
+  height: 100%;
   min-height: 0;
 }
 
 .panel {
   min-width: 0;
+  min-height: 0;
 }
 
 .column {
@@ -98,6 +110,17 @@ body {
   height: 100%;
   background: var(--bg);
   overflow: hidden;
+}
+
+/* The column that currently owns keyboard focus. Inset shadow (not a border)
+   so the accent bar never shifts the terminal layout. */
+.column.focused {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.column.focused .column-header {
+  background: #323236;
+  border-bottom-color: var(--accent);
 }
 
 .column-header {
@@ -121,6 +144,8 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
 }
 
 .column-meta {
@@ -167,6 +192,13 @@ body {
   transition: background 0.12s ease;
 }
 
+/* Handle between vertically-stacked agents in one column. */
+.resize-handle-h {
+  width: auto;
+  height: 6px;
+  cursor: row-resize;
+}
+
 .resize-handle:hover,
 .resize-handle[data-resize-handle-active] {
   background: var(--accent);
@@ -205,6 +237,62 @@ body {
   50% { opacity: 0.35; }
 }
 
+/* ---- Kind badge (Claude / Codex) ---- */
+.kind-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+.kind-claude {
+  color: #d78b4a;
+  background: rgba(215, 139, 74, 0.14);
+  border-color: rgba(215, 139, 74, 0.35);
+}
+
+.kind-codex {
+  color: #4a9bd7;
+  background: rgba(74, 155, 215, 0.14);
+  border-color: rgba(74, 155, 215, 0.35);
+}
+
+/* ---- Segmented control (agent type picker) ---- */
+.segmented {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  width: fit-content;
+}
+
+.segmented-btn {
+  background: var(--bg);
+  color: var(--text-dim);
+  border: none;
+  border-radius: 0;
+  padding: 6px 16px;
+  font-weight: 500;
+}
+
+.segmented-btn:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.segmented-btn:hover {
+  color: var(--text);
+}
+
+.segmented-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
 /* ---- Buttons ---- */
 button {
   font-family: inherit;
@@ -231,6 +319,15 @@ button {
   padding: 6px 14px;
 }
 .btn-secondary:hover { border-color: var(--text-dim); }
+
+.btn-danger {
+  background: var(--status-error);
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  font-weight: 500;
+}
+.btn-danger:hover { background: #e5433f; }
 
 .icon-btn {
   background: transparent;
@@ -267,6 +364,12 @@ button {
 .dialog h2 {
   margin: 0 0 16px;
   font-size: 16px;
+}
+
+.confirm-message {
+  margin: 0;
+  color: var(--text-dim);
+  line-height: 1.5;
 }
 
 .field {

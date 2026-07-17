@@ -16,6 +16,7 @@ const api: MutiApi = {
   resizeAgent: (id: string, cols: number, rows: number) =>
     ipcRenderer.send(IPC.resizeAgent, id, cols, rows),
   pickDirectory: () => ipcRenderer.invoke(IPC.pickDirectory),
+  getBacklog: (id: string) => ipcRenderer.invoke(IPC.getBacklog, id),
   getColumnLayout: () => ipcRenderer.invoke(IPC.getColumnLayout),
   saveColumnLayout: (layout: Record<string, number>) =>
     ipcRenderer.send(IPC.saveColumnLayout, layout),

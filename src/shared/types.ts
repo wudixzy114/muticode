@@ -6,11 +6,21 @@ export type AgentStatus =
   | 'done'
   | 'error'
 
+/** Which coding agent a session runs. Drives default command + status heuristics. */
+export type AgentKind = 'claude' | 'codex'
+
+/** Default launch command for a kind, used when no explicit command is given. */
+export const DEFAULT_COMMAND: Record<AgentKind, string> = {
+  claude: 'claude',
+  codex: 'codex'
+}
+
 export interface Agent {
   id: string
   name: string
   cwd: string
-  /** Command typed into the login shell once it spawns (default "claude"). */
+  kind: AgentKind
+  /** Command typed into the login shell once it spawns (defaults per kind). */
   command: string
 }
 
@@ -24,6 +34,7 @@ export interface PersistedState {
 export interface CreateAgentInput {
   name: string
   cwd: string
+  kind: AgentKind
   command: string
 }
 
@@ -36,6 +47,8 @@ export interface MutiApi {
   writeToAgent: (id: string, data: string) => void
   resizeAgent: (id: string, cols: number, rows: number) => void
   pickDirectory: () => Promise<string | null>
+  /** Raw PTY output emitted so far, for repainting a freshly-mounted terminal. */
+  getBacklog: (id: string) => Promise<string>
   getColumnLayout: () => Promise<Record<string, number>>
   saveColumnLayout: (layout: Record<string, number>) => void
   /** Subscribe to raw PTY output for an agent. Returns an unsubscribe fn. */
@@ -54,6 +67,7 @@ export const IPC = {
   writeToAgent: 'pty:write',
   resizeAgent: 'pty:resize',
   pickDirectory: 'dialog:pickDirectory',
+  getBacklog: 'pty:backlog',
   getColumnLayout: 'columns:get',
   saveColumnLayout: 'columns:save',
   ptyDataPrefix: 'pty:data:',
